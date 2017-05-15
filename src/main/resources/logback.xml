@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<configuration debug="true">
+	<appender name="file" class="ch.qos.logback.core.rolling.RollingFileAppender">
+		<file>api.log</file>
+		<rollingPolicy class="ch.qos.logback.core.rolling.TimeBasedRollingPolicy">
+			<fileNamePattern>/opt/docker/logs/api.log.%d{yyyy-MM-dd}</fileNamePattern>
+			<maxHistory>10</maxHistory>
+		</rollingPolicy>
+		<encoder>
+			<pattern>
+				%d{yyyy-MM-dd HH:mm:ss.SSS} %-5level[%.15thread] %level %logger{1}@%line - %msg%n
+			</pattern>
+		</encoder>
+	</appender>
+
+	<appender name="console" class="ch.qos.logback.core.ConsoleAppender">
+		<encoder>
+			<pattern>
+				%d{yyyy-MM-dd HH:mm:ss.SSS} %-5level[%.15thread] %level %logger{1}@%line - %msg%n
+			</pattern>
+		</encoder>
+	</appender>
+
+	<root level="INFO">
+		<appender-ref ref="console"/>
+		<appender-ref ref="file"/>
+	</root>
+
+	<shutdownHook class="ch.qos.logback.core.hook.DelayingShutdownHook"/>
+</configuration>

@@ -8,22 +8,24 @@ import akka.http.scaladsl.unmarshalling.{FromEntityUnmarshaller, Unmarshal}
 import akka.stream.ActorMaterializer
 import com.typesafe.config.ConfigFactory
 import de.heikoseeberger.akkahttpplayjson.PlayJsonSupport._
-import io.forecastify.api.OpenWeatherMapApiClient.{ApiKey, CurrentWeatherUri, LongTermForecastUri}
-import io.forecastify.api.WeatherForecastApi.Forecast.{CurrentFormat, LongTermFormat}
+import io.forecastify.api.OpenWeatherMapApiClient.ApiKey
 import io.forecastify.api.WeatherForecastApi.WeatherApiFailure.{MalformedRequest, NoResponse}
-import io.forecastify.api.WeatherForecastApi.{Forecast, V}
+import io.forecastify.api.WeatherForecastApi.{Forecast, V, ForecastFormat}
+import io.forecastify.domain.Location.CityName
 
 import scala.concurrent.Future
-import scala.concurrent.duration.FiniteDuration
 
-class OpenWeatherMapApiClient()(
-  private implicit val system: ActorSystem,
-  private implicit val mat: ActorMaterializer) extends WeatherForecastApi {
+class OpenWeatherMapApiClient()(private implicit val system: ActorSystem) extends WeatherForecastApi {
 
   private implicit val ec = system.dispatcher
+  private implicit val mat = ActorMaterializer()
 
-  override def fetchCurrentWeather(cityName: String): Future[V[Forecast.Current]] = {
-    request[Forecast.Current](CurrentWeatherUri, queryParams(cityName))
+  def fetchForLocations(locations: List[CityName]): Future[List[V[Forecast]]] = {
+    Future.sequence(locations.map(cityName => fetchForecast(cityName.value)))
+  }
+
+  override def fetchForecast(cityName: String): Future[V[Forecast]] = {
+    request[Forecast](OpenWeatherMapApiClient.ForecastUri, queryParams(cityName))
   }
 
   private def request[T: FromEntityUnmarshaller](
@@ -43,19 +45,12 @@ class OpenWeatherMapApiClient()(
     } yield f
   }
 
-  private def queryParams(cityName: String) = Query(Map("q" -> cityName, "appid" -> ApiKey))
-
-  override def fetchPeriodWeather(
-    cityName: String,
-    periodLength: FiniteDuration): Future[V[Forecast.LongTerm]] = {
-    request[Forecast.LongTerm](LongTermForecastUri, queryParams(cityName))
-  }
+  private def queryParams(cityName: String) = Query(Map("q" -> cityName, "appid" -> ApiKey, "units" -> "metric"))
 }
 
 object OpenWeatherMapApiClient {
   lazy val ApiKey: String = config.getString("forecastify.openweathermap.key")
-  lazy val CurrentWeatherUri: Uri = Uri(s"$uri/weather")
-  lazy val LongTermForecastUri: Uri = Uri(s"$uri/forecast")
+  lazy val ForecastUri: Uri = Uri(s"$uri/forecast")
 
   private val config = ConfigFactory.load()
   private val uri = config.getString("forecastify.openweathermap.uri")

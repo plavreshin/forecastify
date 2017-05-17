@@ -1,17 +1,16 @@
 package io.forecastify.api
 
+import java.time.Instant
+
 import com.typesafe.scalalogging.LazyLogging
-import io.forecastify.api.WeatherForecastApi.Forecast.{Current, LongTerm}
-import io.forecastify.api.WeatherForecastApi.V
+import io.forecastify.api.WeatherForecastApi.{Forecast, V}
+import io.forecastify.domain.Location.{CityName, Temperature}
 import play.api.libs.json._
 
 import scala.concurrent.Future
-import scala.concurrent.duration.FiniteDuration
 
 trait WeatherForecastApi extends LazyLogging {
-  def fetchCurrentWeather(cityName: String): Future[V[Current]]
-
-  def fetchPeriodWeather(cityName: String, periodLength: FiniteDuration): Future[V[LongTerm]]
+  def fetchForecast(cityName: String): Future[V[Forecast]]
 }
 
 object WeatherForecastApi {
@@ -23,20 +22,33 @@ object WeatherForecastApi {
     case object NoResponse extends WeatherApiFailure
   }
 
-  sealed trait Forecast {
-    def id: Long
-    def name: String
-    def cod: Int
-  }
-  object Forecast {
-    case class Current(id: Long, name: String, cod: Int) extends Forecast
-    case class LongTerm(id: Long, name: String, cod: Int) extends Forecast
+  case class Forecast(id: Long, cityName: CityName, values: List[ForecastValue])
+  case class ForecastValue(temperature: Temperature, measuredAt: Instant)
 
-    implicit val CurrentFormat = Json.format[Current]
-    implicit val LongTermFormat = Json.format[LongTerm]
-//    implicit val Format: Format[Forecast] = new Format[Forecast] {
-//      override def reads(json: JsValue): JsResult[Forecast] = JsSuccess(Current(id = "", name = ""))
-//      override def writes(o: Forecast): JsValue = Json.obj()
-//    }
+  implicit val forecastValueFormat: OFormat[ForecastValue] = {
+    val writes = Json.writes[ForecastValue]
+    val reads = new Reads[ForecastValue] {
+      override def reads(json: JsValue): JsResult[ForecastValue] = {
+        for {
+          temp <- (json \ "main" \ "temp").validate[Temperature]
+          measured <- (json \ "dt").validate[Long]
+        } yield ForecastValue(temperature = temp, measuredAt = Instant.ofEpochSecond(measured))
+      }
+    }
+    OFormat(reads, writes)
+  }
+
+  implicit val ForecastFormat: OFormat[Forecast] =  {
+    val writes = Json.writes[Forecast]
+    val reads = new Reads[Forecast] {
+      override def reads(json: JsValue): JsResult[Forecast] = {
+        for {
+          cityName <- (json \ "city" \ "name").validate[CityName]
+          id <- (json \ "city" \ "id").validate[Long]
+          values <- (json \ "list").validate[List[ForecastValue]]
+        } yield Forecast(id, cityName, values)
+      }
+    }
+    OFormat(reads, writes)
   }
 }

@@ -1,0 +1,18 @@
+[
+  {
+    "cityName": "London",
+    "threshold": 5
+  },
+  {
+    "cityName": "Tallinn",
+    "threshold": 10
+  },
+  {
+    "cityName": "Helsinki",
+    "threshold": 10
+  },
+  {
+    "cityName": "Havana",
+    "threshold": 35
+  }
+]

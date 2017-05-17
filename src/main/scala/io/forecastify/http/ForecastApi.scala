@@ -1,11 +1,23 @@
 package io.forecastify.http
 
-class ForecastApi extends BaseApi {
-  lazy val routes = {
+import akka.http.scaladsl.model.StatusCodes
+import akka.http.scaladsl.model.Uri.Path.Segment
+import io.forecastify.actor.ForecastMonitoringActor.StateValue
+import io.forecastify.domain.Location.CityName
+import play.api.libs.json.{JsValue, Json, Writes}
+import ch.megard.akka.http.cors.scaladsl.CorsDirectives._
+
+class ForecastApi(cache: ForecastCache) extends BaseApi {
+  import ForecastApi.JsonFormat
+
+  lazy val routes = cors() {
     logRequestResult("forecast-api") {
       pathPrefix("api" / "location") {
-        get {
-          complete("Implement locations response")
+        (path(Segment) & get) { city =>
+          cache.get(CityName(city.capitalize)) match {
+            case Some(st) => complete(st)
+            case None => complete(StatusCodes.BadRequest, s"Incorrect $city supplied")
+          }
         }
       }
     }
@@ -13,10 +25,10 @@ class ForecastApi extends BaseApi {
 }
 
 object ForecastApi {
-  sealed trait UserRequest extends Product with Serializable
-
-  object UserRequest {
-    case class Initialize(locations: List[LocationReq]) extends UserRequest
-    case class LocationReq(cityId: String, temperatures: Set[Int])
+  implicit val JsonFormat: Writes[StateValue] = new Writes[StateValue] {
+    override def writes(o: StateValue): JsValue = Json.obj(
+      "measuredAt" -> o.measuredAt,
+      "temperature" -> o.temperature,
+      "validated" -> o.validated.productPrefix)
   }
 }

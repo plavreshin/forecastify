@@ -14,6 +14,8 @@ object Dependencies {
   private val typeSafeConfig = "com.typesafe" % "config" % Versions.config
   private val playJson = "com.typesafe.play" %% "play-json" % Versions.playJson
   private val akkaHttpPlay = "de.heikoseeberger" %% "akka-http-play-json" % Versions.akkaHttpPlay
+  private val akkaHttpCors = "ch.megard" %% "akka-http-cors" % Versions.akkaHttpCors
+
   val akkaDeps = Seq(
     "com.typesafe.akka" %% "akka-actor",
     "com.typesafe.akka" %% "akka-remote",
@@ -37,7 +39,8 @@ object Dependencies {
     typeSafeConfig,
     playJson,
     akkaHttpPlay,
-    akkaTestkit)
+    akkaTestkit,
+    akkaHttpCors)
 
   object Versions {
     val mockito = "1.10.19"
@@ -49,5 +52,6 @@ object Dependencies {
     val logback = "1.1.7"
     val scalaLogging = "3.4.0"
     val akkaHttpPlay = "1.16.0"
+    val akkaHttpCors = "0.2.1"
   }
 }
